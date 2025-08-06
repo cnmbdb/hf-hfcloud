@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
 // Supabase配置 - 请替换为您的实际配置
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
+
+// 检查环境变量是否正确配置
+if (supabaseUrl === 'https://your-project.supabase.co' || supabaseAnonKey === 'your-anon-key') {
+  console.warn('⚠️ Supabase 环境变量未正确配置，请检查 .env 文件')
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 

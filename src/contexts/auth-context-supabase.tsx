@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { UserService, SessionService } from '@/services/database'
+import { FALLBACK_CONFIG, isSupabaseAvailable } from '@/lib/fallback-config'
 
 export interface User {
   id: string
@@ -75,6 +76,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true)
     
     try {
+      // 检查 Supabase 是否可用
+      if (!isSupabaseAvailable()) {
+        console.warn('Supabase 不可用，使用回退模式')
+        
+        // 使用回退用户数据进行验证
+        const fallbackUser = FALLBACK_CONFIG.defaultUsers.find(u => u.username === username)
+        if (fallbackUser && password === 'admin123') {
+          const sessionId = 'fallback_session_' + Date.now()
+          setUser(fallbackUser)
+          setCurrentSessionId(sessionId)
+          localStorage.setItem('hfcloud_user', JSON.stringify(fallbackUser))
+          localStorage.setItem('hfcloud_session_id', sessionId)
+          setIsLoading(false)
+          return { success: true }
+        }
+        setIsLoading(false)
+        return { success: false, error: '用户名或密码错误（回退模式：密码为 admin123）' }
+      }
+      
       // 使用Supabase验证用户凭据
       const foundUser = await UserService.validateCredentials(username, password)
       
@@ -85,7 +105,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // 检查设备在线限制
       const existingSessions = await SessionService.getUserActiveSessions(foundUser.id)
-      const deviceLimit = DEVICE_LIMITS[foundUser.role]
+      const deviceLimit = DEVICE_LIMITS[foundUser.role as keyof typeof DEVICE_LIMITS]
       
       if (existingSessions.length >= deviceLimit) {
         setIsLoading(false)
