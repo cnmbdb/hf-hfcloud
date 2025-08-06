@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Settings, ShoppingBag, Save, Bell } from 'lucide-react'
 import { useCustomToast } from '@/components/ui/toast-manager'
-import { useAuth } from '@/contexts/auth-context'
-import { useSystemConfig } from '@/contexts/system-config-context'
+import { useAuth } from '@/contexts/auth-context-supabase'
+import { useSystemConfig } from '@/contexts/system-config-context-supabase'
 import { isSuperAdmin } from '@/utils/permissions'
 
 // 系统设置组件

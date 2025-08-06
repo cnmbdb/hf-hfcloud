@@ -8,8 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useAuth } from '@/contexts/auth-context'
-import { useSystemConfig } from '@/contexts/system-config-context'
+import { useAuth } from '@/contexts/auth-context-supabase'
+import { useSystemConfig } from '@/contexts/system-config-context-supabase'
 import { getRoleLabel, getRoleColor, getRoleBgColor } from '@/utils/permissions'
 
 const Navbar = () => {
@@ -51,7 +51,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center">
-            {config.logoUrl && config.logoUrl !== '/logo.png' ? (
+            {config.logoUrl && config.logoUrl !== '/logo.png' && (
               <img 
                 src={config.logoUrl} 
                 alt="Logo" 
@@ -61,10 +61,6 @@ const Navbar = () => {
                   height: `${config.logoSize}px` 
                 }}
               />
-            ) : (
-              <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 via-indigo-500 to-purple-500">
-                <Cloud className="h-6 w-6 text-white" />
-              </div>
             )}
           </Link>
 

@@ -1,16 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
-import { 
-  UserRole, 
-  validateUserCredentials, 
-  updateUserPassword, 
-  getUserById 
-} from '@/utils/user-data'
+import { UserService, SessionService } from '@/services/database'
 
 export interface User {
   id: string
   username: string
   email: string
-  role: UserRole
+  role: 'super_admin' | 'admin' | 'user'
   roleLabel: string
 }
 
@@ -48,11 +43,6 @@ const getDeviceInfo = (): string => {
   return `${platform} - ${userAgent.substring(0, 50)}...`
 }
 
-// 生成会话ID
-const generateSessionId = (): string => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -64,53 +54,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedSessionId = localStorage.getItem('hfcloud_session_id')
     
     if (savedUser && savedSessionId) {
-      setUser(JSON.parse(savedUser))
+      const parsedUser = JSON.parse(savedUser)
+      setUser(parsedUser)
       setCurrentSessionId(savedSessionId)
+      
+      // 更新会话活动时间
+      SessionService.updateSessionActivity(savedSessionId)
     }
     setIsLoading(false)
+
+    // 定期清理过期会话
+    const cleanupInterval = setInterval(() => {
+      SessionService.cleanExpiredSessions()
+    }, 60 * 60 * 1000) // 每小时清理一次
+
+    return () => clearInterval(cleanupInterval)
   }, [])
-
-  // 获取用户的活跃会话
-  const getUserSessions = (userId: string): LoginSession[] => {
-    const sessions = localStorage.getItem(`hfcloud_sessions_${userId}`)
-    return sessions ? JSON.parse(sessions) : []
-  }
-
-  // 保存用户会话
-  const saveUserSessions = (userId: string, sessions: LoginSession[]) => {
-    localStorage.setItem(`hfcloud_sessions_${userId}`, JSON.stringify(sessions))
-  }
-
-  // 清理过期会话（24小时未活动）
-  const cleanExpiredSessions = (sessions: LoginSession[]): LoginSession[] => {
-    const now = Date.now()
-    const twentyFourHours = 24 * 60 * 60 * 1000
-    return sessions.filter(session => now - session.lastActivity < twentyFourHours)
-  }
 
   const login = async (username: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setIsLoading(true)
     
     try {
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 使用共享的用户数据验证凭据
-      const foundUser = validateUserCredentials(username, password)
+      // 使用Supabase验证用户凭据
+      const foundUser = await UserService.validateCredentials(username, password)
       
       if (!foundUser) {
         setIsLoading(false)
         return { success: false, error: '用户名或密码错误' }
       }
 
-      // 检查账户状态
-      if (foundUser.status === 'disabled') {
-        setIsLoading(false)
-        return { success: false, error: '该账户已被停用，请联系管理员' }
-      }
-
       // 检查设备在线限制
-      const existingSessions = cleanExpiredSessions(getUserSessions(foundUser.id))
+      const existingSessions = await SessionService.getUserActiveSessions(foundUser.id)
       const deviceLimit = DEVICE_LIMITS[foundUser.role]
       
       if (existingSessions.length >= deviceLimit) {
@@ -122,35 +96,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // 创建新会话
-      const sessionId = generateSessionId()
-      const newSession: LoginSession = {
-        sessionId,
-        userId: foundUser.id,
-        loginTime: Date.now(),
-        lastActivity: Date.now(),
-        deviceInfo: getDeviceInfo()
+      const sessionId = await SessionService.createSession(foundUser.id, getDeviceInfo())
+      
+      if (!sessionId) {
+        setIsLoading(false)
+        return { success: false, error: '创建会话失败，请重试' }
       }
 
-      // 保存会话信息
-      const updatedSessions = [...existingSessions, newSession]
-      saveUserSessions(foundUser.id, updatedSessions)
-
-      const userInfo: User = {
-        id: foundUser.id,
-        username: foundUser.username,
-        email: foundUser.email,
-        role: foundUser.role,
-        roleLabel: foundUser.roleLabel
-      }
-
-      setUser(userInfo)
+      // 保存用户信息和会话ID
+      setUser(foundUser)
       setCurrentSessionId(sessionId)
-      localStorage.setItem('hfcloud_user', JSON.stringify(userInfo))
+      localStorage.setItem('hfcloud_user', JSON.stringify(foundUser))
       localStorage.setItem('hfcloud_session_id', sessionId)
       
       setIsLoading(false)
       return { success: true }
     } catch (error) {
+      console.error('登录失败:', error)
       setIsLoading(false)
       return { success: false, error: '登录过程中发生错误' }
     }
@@ -163,36 +125,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setIsLoading(true)
     
-    // 模拟API调用延迟
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    try {
+      // 使用Supabase更新密码
+      const success = await UserService.updatePassword(user.id, oldPassword, newPassword)
+      
+      if (!success) {
+        setIsLoading(false)
+        return { success: false, error: '原密码错误或密码更新失败' }
+      }
 
-    // 使用共享的用户数据验证旧密码
-    const foundUser = validateUserCredentials(user.username, oldPassword)
-    if (!foundUser) {
+      // 修改密码后自动退出登录
+      logout()
+      
       setIsLoading(false)
-      return { success: false, error: '原密码错误' }
-    }
-
-    // 更新密码
-    const success = updateUserPassword(user.id, newPassword)
-    if (!success) {
+      return { success: true }
+    } catch (error) {
+      console.error('修改密码失败:', error)
       setIsLoading(false)
-      return { success: false, error: '密码更新失败' }
+      return { success: false, error: '修改密码过程中发生错误' }
     }
-
-    // 修改密码后自动退出登录
-    logout()
-    
-    setIsLoading(false)
-    return { success: true }
   }
 
   const logout = () => {
-    if (user && currentSessionId) {
-      // 移除当前会话
-      const sessions = getUserSessions(user.id)
-      const updatedSessions = sessions.filter(s => s.sessionId !== currentSessionId)
-      saveUserSessions(user.id, updatedSessions)
+    if (currentSessionId) {
+      // 结束当前会话
+      SessionService.endSession(currentSessionId)
     }
 
     setUser(null)

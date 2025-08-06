@@ -14,7 +14,7 @@ import {
   ChevronDown,
   ChevronRight
 } from 'lucide-react'
-import { useAuth } from '@/contexts/auth-context'
+import { useAuth } from '@/contexts/auth-context-supabase'
 import { canAccessUserManagement } from '@/utils/permissions'
 
 interface ConsoleLayoutProps {

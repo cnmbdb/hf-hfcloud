@@ -2,8 +2,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { CustomToastProvider } from '@/components/ui/toast-manager'
-import { AuthProvider } from '@/contexts/auth-context'
-import { SystemConfigProvider } from '@/contexts/system-config-context'
+import { AuthProvider } from '@/contexts/auth-context-supabase'
+import { SystemConfigProvider } from '@/contexts/system-config-context-supabase'
 import ProtectedRoute from '@/components/protected-route'
 import Navbar from '@/components/navbar'
 import HomePage from '@/pages/home'
@@ -23,9 +23,9 @@ import './globals.css'
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="hfcloud-ui-theme">
-      <SystemConfigProvider>
-        <CustomToastProvider>
-          <AuthProvider>
+      <CustomToastProvider>
+        <AuthProvider>
+          <SystemConfigProvider>
           <Router>
             <div className="min-h-screen bg-[#0d1117] text-white">
             <Navbar />
@@ -129,9 +129,9 @@ function App() {
             <Toaster />
           </div>
         </Router>
-          </AuthProvider>
-        </CustomToastProvider>
-      </SystemConfigProvider>
+          </SystemConfigProvider>
+        </AuthProvider>
+      </CustomToastProvider>
     </ThemeProvider>
   )
 }

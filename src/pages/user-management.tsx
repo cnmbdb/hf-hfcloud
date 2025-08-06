@@ -17,7 +17,8 @@ import {
   Package,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -42,17 +43,15 @@ import {
 } from "@/components/ui/select"
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useAuth } from '@/contexts/auth-context'
+import { useAuth } from '@/contexts/auth-context-supabase'
 import { canManageUsers, canAccessUserManagement } from '@/utils/permissions'
 import { useNavigate } from 'react-router-dom'
 import { useCustomToast } from '@/components/ui/toast-manager'
-import { 
-  getAllUsers, 
-  updateUserStatus, 
-  UserRole, 
-  UserStatus, 
-  MockUser 
-} from '@/utils/user-data'
+import { supabase } from '@/lib/supabase'
+
+// 类型定义
+type UserRole = 'super_admin' | 'admin' | 'user'
+type UserStatus = 'active' | 'disabled'
 
 interface User {
   id: string
@@ -111,22 +110,47 @@ const UserManagementPage = () => {
     )
   }
 
-  // 用户数据状态管理 - 使用共享的用户数据
+  // 用户数据状态管理 - 从 Supabase 数据库获取
   const [allUsers, setAllUsers] = useState<User[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // 从数据库获取用户数据
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true)
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.error('获取用户数据失败:', error)
+        showError('数据加载失败', '无法从数据库获取用户数据')
+        return
+      }
+
+      const formattedUsers: User[] = users.map((dbUser: any) => ({
+        id: dbUser.id,
+        username: dbUser.username,
+        email: dbUser.email,
+        role: dbUser.role,
+        status: dbUser.status,
+        lastLogin: dbUser.last_login || '未知',
+        projects: dbUser.related_projects || []
+      }))
+
+      setAllUsers(formattedUsers)
+    } catch (error) {
+      console.error('获取用户数据异常:', error)
+      showError('数据加载异常', '获取用户数据时发生异常')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   // 初始化用户数据
   useEffect(() => {
-    const mockUsers = getAllUsers()
-    const formattedUsers: User[] = mockUsers.map(user => ({
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      lastLogin: user.lastLogin || '未知',
-      projects: user.relatedProjects || []
-    }))
-    setAllUsers(formattedUsers)
+    fetchUsers()
   }, [])
 
   // 可用的产品项目
@@ -225,6 +249,27 @@ const UserManagementPage = () => {
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // 更新用户状态到数据库
+  const updateUserStatusInDB = async (userId: string, status: UserStatus) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          status: status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+
+      if (error) {
+        console.error('更新用户状态失败:', error)
+        return false
+      }
+      return true
+    } catch (error) {
+      console.error('更新用户状态异常:', error)
+      return false
+    }
+  }
 
   // 打开编辑对话框
   const handleEditUser = (userToEdit: User) => {
@@ -243,38 +288,74 @@ const UserManagementPage = () => {
   }
 
   // 保存用户编辑
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (!editingUser) return
 
-    // 同步更新共享的用户数据
-    if (editUserData.status !== editingUser.status) {
-      updateUserStatus(editingUser.id, editUserData.status)
-    }
+    try {
+      // 更新数据库中的用户信息
+      const updateData: any = {
+        username: editUserData.username,
+        email: editUserData.email,
+        role: editUserData.role,
+        status: editUserData.status,
+        updated_at: new Date().toISOString()
+      }
 
-    // 更新本地用户列表状态
-    setAllUsers(prevUsers => 
-      prevUsers.map(u => 
-        u.id === editingUser.id 
-          ? {
-              ...u,
-              username: editUserData.username,
-              email: editUserData.email,
-              role: editUserData.role,
-              status: editUserData.status,
-              projects: editUserData.projects
-            }
-          : u
+      // 只有当 projects 字段存在时才更新
+      if (editUserData.projects && editUserData.projects.length > 0) {
+        updateData.projects = JSON.stringify(editUserData.projects)
+      }
+
+      console.log('准备更新的数据:', updateData)
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', editingUser.id)
+
+      if (error) {
+        console.error('更新用户信息失败:', error)
+        console.error('错误详情:', JSON.stringify(error, null, 2))
+        console.error('更新数据:', {
+          username: editUserData.username,
+          email: editUserData.email,
+          role: editUserData.role,
+          status: editUserData.status,
+          projects: editUserData.projects,
+          updated_at: new Date().toISOString()
+        })
+        showError('保存失败', `数据库错误: ${error.message || '未知错误'}`)
+        return
+      }
+
+      // 更新本地用户列表状态
+      setAllUsers(prevUsers => 
+        prevUsers.map(u => 
+          u.id === editingUser.id 
+            ? {
+                ...u,
+                username: editUserData.username,
+                email: editUserData.email,
+                role: editUserData.role,
+                status: editUserData.status,
+                projects: editUserData.projects
+              }
+            : u
+        )
       )
-    )
 
-    // 显示保存成功提示
-    showSuccess('保存成功', '用户信息已成功更新')
-    
-    // 关闭对话框
-    setIsEditDialogOpen(false)
-    setEditingUser(null)
-    
-    console.log('用户信息已同步更新:', editUserData)
+      // 显示保存成功提示
+      showSuccess('保存成功', '用户信息已成功更新')
+      
+      // 关闭对话框
+      setIsEditDialogOpen(false)
+      setEditingUser(null)
+      
+      console.log('用户信息已同步更新:', editUserData)
+    } catch (error) {
+      console.error('保存用户信息异常:', error)
+      showError('保存异常', '保存用户信息时发生异常')
+    }
   }
 
   // 打开密码修改对话框
@@ -345,6 +426,16 @@ const UserManagementPage = () => {
         ? [...prev.projects, project]
         : prev.projects.filter(p => p !== project)
     }))
+  }
+
+  // 如果正在加载，显示加载状态
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-4" />
+        <p className="text-gray-400">正在加载用户数据...</p>
+      </div>
+    )
   }
 
   return (
@@ -429,6 +520,14 @@ const UserManagementPage = () => {
           <CardTitle className="text-white flex items-center">
             <Users className="h-5 w-5 mr-2" />
             用户列表
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={fetchUsers}
+              className="ml-auto text-gray-400 hover:text-white"
+            >
+              刷新数据
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
