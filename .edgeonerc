@@ -1,7 +1,7 @@
 {
   "build": {
     "command": "npm run build",
-    "output": "build"
+    "output": "dist"
   },
   "routes": [
     {
