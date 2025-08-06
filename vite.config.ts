@@ -9,6 +9,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    outDir: "build"
+  },
   server: {
     host: "0.0.0.0",
     allowedHosts: true
