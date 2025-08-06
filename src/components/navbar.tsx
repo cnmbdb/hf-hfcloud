@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useAuth } from '@/contexts/auth-context'
+import { useSystemConfig } from '@/contexts/system-config-context'
 import { getRoleLabel, getRoleColor, getRoleBgColor } from '@/utils/permissions'
 
 const Navbar = () => {
@@ -16,6 +17,7 @@ const Navbar = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { user, logout, isAuthenticated } = useAuth()
+  const { config } = useSystemConfig()
 
   const publicNavItems = [
     { name: '产品', href: '/' },
@@ -48,13 +50,22 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 via-indigo-500 to-purple-500">
-              <Cloud className="h-6 w-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">
-              HFCloud
-            </span>
+          <Link to="/" className="flex items-center">
+            {config.logoUrl && config.logoUrl !== '/logo.png' ? (
+              <img 
+                src={config.logoUrl} 
+                alt="Logo" 
+                className="object-contain"
+                style={{ 
+                  width: `${config.logoSize}px`, 
+                  height: `${config.logoSize}px` 
+                }}
+              />
+            ) : (
+              <div className="p-2 rounded-lg bg-gradient-to-r from-red-500 via-orange-500 via-yellow-500 via-green-500 via-blue-500 via-indigo-500 to-purple-500">
+                <Cloud className="h-6 w-6 text-white" />
+              </div>
+            )}
           </Link>
 
           {/* Desktop Navigation */}

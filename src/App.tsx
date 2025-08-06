@@ -3,6 +3,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { CustomToastProvider } from '@/components/ui/toast-manager'
 import { AuthProvider } from '@/contexts/auth-context'
+import { SystemConfigProvider } from '@/contexts/system-config-context'
 import ProtectedRoute from '@/components/protected-route'
 import Navbar from '@/components/navbar'
 import HomePage from '@/pages/home'
@@ -16,13 +17,15 @@ import UserManagementPage from '@/pages/user-management'
 import ConsoleLayout from '@/components/console-layout'
 import ConsoleDashboard from '@/pages/console-dashboard'
 import DomainManagePage from '@/pages/domain-manage'
+import ConsoleSettings from '@/pages/console-settings'
 import './globals.css'
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="hfcloud-ui-theme">
-      <CustomToastProvider>
-        <AuthProvider>
+      <SystemConfigProvider>
+        <CustomToastProvider>
+          <AuthProvider>
           <Router>
             <div className="min-h-screen bg-[#0d1117] text-white">
             <Navbar />
@@ -118,12 +121,7 @@ function App() {
               <Route path="/console/settings" element={
                 <ProtectedRoute>
                   <ConsoleLayout>
-                    <div className="flex items-center justify-center h-96">
-                      <div className="text-center text-white">
-                        <h1 className="text-2xl font-bold mb-4">设置</h1>
-                        <p className="text-gray-400">系统设置功能正在开发中...</p>
-                      </div>
-                    </div>
+                    <ConsoleSettings />
                   </ConsoleLayout>
                 </ProtectedRoute>
               } />
@@ -131,9 +129,10 @@ function App() {
             <Toaster />
           </div>
         </Router>
-      </AuthProvider>
-    </CustomToastProvider>
-  </ThemeProvider>
+          </AuthProvider>
+        </CustomToastProvider>
+      </SystemConfigProvider>
+    </ThemeProvider>
   )
 }
 
