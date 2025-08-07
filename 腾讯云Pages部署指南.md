@@ -8,11 +8,11 @@
 **仓库信息：**
 - 仓库地址：`https://github.com/cnmbdb/hf-hfcloud`
 - 分支：`main`
-- 根目录：`hfcloud-website/hfcloud-website`
+- 根目录：`./` 或留空
 
 **构建配置：**
-- 构建命令：`npm run build`
-- 输出目录：`dist`
+- 构建命令：`cd hfcloud-website/hfcloud-website && npm install && npm run build`
+- 输出目录：`hfcloud-website/hfcloud-website/dist`
 - Node.js版本：`18.x`
 
 ### 2. 环境变量配置
