@@ -1,0 +1,20 @@
+{
+  "envId": "{{env.ENV_ID}}",
+  "framework": {
+    "name": "react",
+    "plugins": {
+      "@cloudbase/framework-plugin-website": {
+        "buildCommand": "npm run build",
+        "outputPath": "dist",
+        "cloudPath": "/",
+        "ignore": [
+          ".git",
+          ".gitignore", 
+          "node_modules",
+          ".DS_Store",
+          "*.log"
+        ]
+      }
+    }
+  }
+}
