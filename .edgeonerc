@@ -1,7 +1,9 @@
+VITE_SUPABASE_URL=您的Supabase项目URL
+VITE_SUPABASE_ANON_KEY=您的Supabase匿名密钥
 {
   "build": {
     "command": "npm run build",
-    "output": "dist"
+    "output": "build"
   },
   "routes": [
     {
