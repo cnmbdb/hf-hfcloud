@@ -1,0 +1,20 @@
+{
+  "path": "/Users/hf-mac/CodeBuddy/20250804t235321/hfcloud-website/hfcloud-website/dist",
+  "desc": "这是更新后的 HFCloud 边缘计算平台前端项目，已将用户管理页面中的编辑图标颜色修改为白色。",
+  "id": "5b9c188d654949c4b02873238205e7e2",
+  "data": {
+    "spaceKey": "5b9c188d654949c4b02873238205e7e2",
+    "connections": {
+      "webIDE": "https://5b9c188d654949c4b02873238205e7e2.ap-singapore.cloudstudio.club",
+      "preview": "",
+      "api": "https://5b9c188d654949c4b02873238205e7e2--api.ap-singapore.cloudstudio.club",
+      "pty": "https://5b9c188d654949c4b02873238205e7e2--pty.ap-singapore.cloudstudio.club"
+    }
+  },
+  "config": {
+    "api": "https://5b9c188d654949c4b02873238205e7e2--api.ap-singapore.cloudstudio.club",
+    "pty": "https://5b9c188d654949c4b02873238205e7e2--pty.ap-singapore.cloudstudio.club",
+    "region": "ap-shanghai",
+    "spaceKey": "5b9c188d654949c4b02873238205e7e2"
+  }
+}

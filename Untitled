@@ -1,0 +1,26 @@
+-- 用户表
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  role VARCHAR(20) DEFAULT 'user',
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 系统配置表
+CREATE TABLE system_configs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  config_key VARCHAR(50) UNIQUE NOT NULL,
+  config_value JSONB NOT NULL,
+  updated_by UUID REFERENCES users(id),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- 用户设置表
+CREATE TABLE user_settings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES users(id),
+  setting_key VARCHAR(50) NOT NULL,
+  setting_value JSONB NOT NULL,
+  UNIQUE(user_id, setting_key)
+);
